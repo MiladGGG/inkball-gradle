@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="inkball.winConditionTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2024-10-25T12:28:57" hostname="Milads-MBP" time="1.048">
-  <properties/>
-  <testcase name="testWin()" classname="inkball.winConditionTest" time="1.048"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
