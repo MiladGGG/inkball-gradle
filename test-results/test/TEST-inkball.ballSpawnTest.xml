@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="inkball.ballSpawnTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2024-10-25T12:28:55" hostname="Milads-MBP" time="1.06">
+  <properties/>
+  <testcase name="testSpawn()" classname="inkball.ballSpawnTest" time="1.06"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

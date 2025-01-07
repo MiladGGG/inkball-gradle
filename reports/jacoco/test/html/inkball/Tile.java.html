@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Tile.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">inkball_scaffold</a> &gt; <a href="index.source.html" class="el_package">inkball</a> &gt; <span class="el_source">Tile.java</span></div><h1>Tile.java</h1><pre class="source lang-java linenums">package inkball;
+
+import processing.core.PImage;
+
+import org.checkerframework.checker.units.qual.C;
+
+import processing.core.PApplet;
+import processing.core.PFont;
+
+@SuppressWarnings(&quot;unused&quot;)
+public class Tile extends Object implements Collision{
+
+
+
+
+
+    public int arrayInd;
+
+<span class="fc" id="L19">    public Colours.c colour = Colours.c.Grey;</span>
+
+    //Tile bools
+    public boolean collisionEnabled;
+    boolean is_futile;
+    boolean ball_override;
+
+    //Spawner
+    public boolean isSpawner;
+
+
+    //HOLE TILES
+    public boolean isHole;
+    public int holeCentreX;
+    public int holeCentreY;
+<span class="fc" id="L34">    float holeDistance = 10f;</span>
+
+<span class="fc" id="L36">    enum collide_direction {</span>
+<span class="fc" id="L37">        x,</span>
+<span class="fc" id="L38">        y</span>
+    }
+
+    collide_direction direction;
+
+    //Points
+<span class="fc" id="L44">    Point[] point = new Point[4];</span>
+
+<span class="fc" id="L46">    LinePoint[] side = new LinePoint[4];</span>
+
+
+<span class="fc" id="L49">    public Tile(int x, int y, App mainApp){</span>
+<span class="fc" id="L50">        this.x = x;</span>
+<span class="fc" id="L51">        this.y = y;</span>
+<span class="fc" id="L52">        this.mainApp = mainApp;</span>
+        
+<span class="fc" id="L54">        holeCentreX = x +32;</span>
+<span class="fc" id="L55">        holeCentreY = y + 32;</span>
+<span class="fc" id="L56">    }</span>
+
+    public void setSprite(PImage sprite){
+<span class="fc bfc" id="L59" title="All 4 branches covered.">        if(is_futile == false &amp;&amp; ball_override == false)</span>
+<span class="fc" id="L60">        this.sprite = sprite;</span>
+<span class="fc" id="L61">    }</span>
+
+
+    public void draw() {
+        //Tick
+<span class="pc bpc" id="L66" title="1 of 4 branches missed.">        if(mainApp.ispaused == false &amp;&amp; mainApp.isEnd == false){</span>
+<span class="fc" id="L67">            CollisionReport report = checkCollision();</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">            if(report.collision_occured){</span>
+<span class="fc" id="L69">                report.ball.iVelocity = report.ux;</span>
+<span class="fc" id="L70">                report.ball.jVelocity = report.uy;</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">                if(colour != Colours.c.Grey){</span>
+<span class="fc" id="L72">                    report.ball.change_colour(mainApp.ballCols[Colours.getSpriteIndex(colour)], colour);</span>
+                }
+            }
+            
+    
+<span class="fc bfc" id="L77" title="All 2 branches covered.">            if(isHole)</span>
+<span class="fc" id="L78">            holeSense();</span>
+        }
+
+
+
+        //Draw
+<span class="fc" id="L84">        mainApp.image(this.sprite, this.x, this.y);</span>
+        
+
+            
+
+        
+
+<span class="fc" id="L91">    }</span>
+
+
+    public CollisionReport checkCollision(){
+
+        //Move to initialisation
+        
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        for(int i = 0; i &lt; 4; i++)</span>
+<span class="fc" id="L99">        point[i] = new Point(i,x,y);</span>
+
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        for(int i = 0; i &lt; 4; i++){</span>
+<span class="fc" id="L102">            side[i] = getCorner(i);</span>
+        }
+
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        if(collisionEnabled){</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            for(int j = 0; j&lt; mainApp.balls.size(); j++){</span>
+                
+                
+<span class="fc" id="L109">                Ball ball =  mainApp.balls.get(j);</span>
+
+<span class="fc" id="L111">                Boolean withinY = false;</span>
+<span class="fc" id="L112">                Boolean withinX = false;</span>
+                
+
+<span class="fc" id="L115">                double posx = ball.centreX - ball.iVelocity;</span>
+<span class="fc" id="L116">                double posy = ball.centreY - ball.jVelocity;</span>
+
+
+                //WITHIN Y FILE
+<span class="fc bfc" id="L120" title="All 4 branches covered.">                if(posx &gt; side[0].x1  &amp;&amp; posx &lt; side[0].x2 ){</span>
+<span class="fc" id="L121">                    withinY = true;</span>
+                }
+                else{
+<span class="fc" id="L124">                    withinY = false;</span>
+                }
+                //WITHIN X FILE
+<span class="fc bfc" id="L127" title="All 4 branches covered.">                if(posy &gt; side[0].y1  &amp;&amp; posy &lt; point[3].y ){</span>
+<span class="fc" id="L128">                    withinX = true;</span>
+                }
+                else{
+<span class="fc" id="L131">                    withinX = false;</span>
+                }
+            
+
+<span class="fc bfc" id="L135" title="All 4 branches covered.">                if(withinX &amp;&amp; withinY){</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">                    if(direction == collide_direction.x)</span>
+<span class="fc" id="L137">                    return new CollisionReport(true, ball.iVelocity * -1, ball.jVelocity, ball);</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">                    if(direction == collide_direction.y)</span>
+<span class="fc" id="L139">                    return new CollisionReport(true, ball.iVelocity, ball.jVelocity * -1, ball);</span>
+                }
+
+                
+<span class="fc bfc" id="L143" title="All 4 branches covered.">                if(withinX &amp;&amp; withinY == false){</span>
+<span class="fc" id="L144">                    direction = collide_direction.x;</span>
+                }
+<span class="fc bfc" id="L146" title="All 4 branches covered.">                if(withinY &amp;&amp; withinX == false){</span>
+<span class="fc" id="L147">                    direction = collide_direction.y;</span>
+                }
+                
+
+
+                
+            }
+            
+        }
+
+        //Return
+<span class="fc" id="L158">        return new CollisionReport(false);</span>
+    }
+
+
+    public void holeSense(){
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        for(int j = 0; j&lt; mainApp.balls.size(); j++){</span>
+<span class="fc" id="L164">            Ball ball = mainApp.balls.get(j);</span>
+
+<span class="fc" id="L166">            double distance1 = Math.sqrt(Math.pow((ball.centreX - holeCentreX),2) + Math.pow((ball.centreY - holeCentreY),2));</span>
+
+
+    
+<span class="fc bfc" id="L170" title="All 2 branches covered.">                if(distance1 &lt; 32){</span>
+                    //Edge closer
+<span class="fc" id="L172">                    double xVector = holeCentreX- ball.centreX;</span>
+<span class="fc" id="L173">                    double yVector = holeCentreY - ball.centreY;</span>
+
+<span class="fc" id="L175">                    ball.iVelocity += xVector * 0.005f;</span>
+<span class="fc" id="L176">                    ball.jVelocity += yVector * 0.005f;</span>
+
+<span class="fc" id="L178">                    ball.scaleBall(distance1);</span>
+
+<span class="pc bpc" id="L180" title="1 of 2 branches missed.">                    if(distance1 &lt; holeDistance){</span>
+<span class="nc" id="L181">                        mainApp.ballHole(ball, this);</span>
+                    }
+                }
+            }
+<span class="fc" id="L185">    }</span>
+
+
+    public float getX(){
+<span class="fc" id="L189">        return x;</span>
+    }
+    public float getY(){
+<span class="fc" id="L192">        return y;</span>
+    }
+
+    public void setX(int i){
+<span class="nc" id="L196">        this.x = i;</span>
+<span class="nc" id="L197">    }</span>
+    public void setY(int i ){
+<span class="nc" id="L199">        this.y = i;</span>
+<span class="nc" id="L200">    }</span>
+
+    public void banish(){
+<span class="fc" id="L203">        is_futile = true;</span>
+<span class="fc" id="L204">        sprite = null;</span>
+<span class="fc" id="L205">    }</span>
+    public void ball_wall(PImage wall){
+<span class="fc" id="L207">        setSprite(wall);</span>
+<span class="fc" id="L208">        ball_override = true;</span>
+        
+<span class="fc" id="L210">    }</span>
+
+    public LinePoint getCorner(int index){
+<span class="fc bfc" id="L213" title="All 2 branches covered.">        if(index == 0){</span>
+<span class="fc" id="L214">            return new LinePoint(point[0].x,point[1].x,point[0].y,point[1].y);</span>
+        }
+<span class="fc bfc" id="L216" title="All 2 branches covered.">        if(index == 1){</span>
+<span class="fc" id="L217">            return new LinePoint(point[0].x,point[2].x,point[0].y,point[2].y);</span>
+        }
+<span class="fc bfc" id="L219" title="All 2 branches covered.">        if(index == 2){</span>
+<span class="fc" id="L220">            return new LinePoint(point[2].x,point[3].x,point[2].y,point[3].y);</span>
+        }
+<span class="pc bpc" id="L222" title="1 of 2 branches missed.">        if(index == 3){</span>
+<span class="fc" id="L223">            return new LinePoint(point[1].x,point[3].x,point[1].y,point[3].y);</span>
+        }
+<span class="nc" id="L225">        return null;</span>
+    }
+
+
+
+    public String speakCorner(int index){
+<span class="nc bnc" id="L231" title="All 2 branches missed.">        if(index == 0){</span>
+<span class="nc" id="L232">            return &quot;UP&quot;;</span>
+        }
+<span class="nc bnc" id="L234" title="All 2 branches missed.">        if(index == 1){</span>
+<span class="nc" id="L235">            return  &quot;LEFT&quot;;</span>
+        }
+<span class="nc bnc" id="L237" title="All 2 branches missed.">        if(index == 2){</span>
+<span class="nc" id="L238">            return &quot;DOWN&quot;;</span>
+        }
+<span class="nc bnc" id="L240" title="All 2 branches missed.">        if(index == 3){</span>
+<span class="nc" id="L241">            return &quot;RIGHT&quot;;</span>
+        }
+<span class="nc" id="L243">        return null;</span>
+    }
+
+class Point{
+    public float x;
+    public float y;
+
+<span class="fc" id="L250">    public Point(int Corner, float x, float y ){</span>
+
+<span class="fc bfc" id="L252" title="All 4 branches covered.">        if(Corner == 0 || Corner == 2){</span>
+<span class="fc" id="L253">            this.x = x;</span>
+        }
+<span class="fc bfc" id="L255" title="All 4 branches covered.">        if(Corner == 1 || Corner == 3){</span>
+<span class="fc" id="L256">            this.x = x + 32;</span>
+        }
+<span class="fc bfc" id="L258" title="All 4 branches covered.">        if(Corner == 0 || Corner == 1){</span>
+<span class="fc" id="L259">            this.y = y;</span>
+        }
+<span class="fc bfc" id="L261" title="All 4 branches covered.">        if(Corner == 2 || Corner == 3){</span>
+<span class="fc" id="L262">            this.y = y + 32;</span>
+        }
+        
+<span class="fc" id="L265">    }</span>
+
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,975 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>App.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">inkball_scaffold</a> &gt; <a href="index.source.html" class="el_package">inkball</a> &gt; <span class="el_source">App.java</span></div><h1>App.java</h1><pre class="source lang-java linenums">package inkball;
+
+import processing.core.PApplet;
+import processing.core.PFont;
+import processing.core.PImage;
+import processing.data.JSONArray;
+import processing.data.JSONObject;
+import processing.event.KeyEvent;
+import processing.event.MouseEvent;
+
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+
+import java.io.*;
+import java.util.*;
+
+import org.checkerframework.checker.units.qual.Time;
+
+
+@SuppressWarnings(&quot;unused&quot;)
+public class App extends PApplet {
+
+    public static final int CELLSIZE = 32; //8;
+    public static final int CELLHEIGHT = 32;
+
+    public static final int CELLAVG = 32;
+    public static final int TOPBAR = 64;
+<span class="fc" id="L28">    public static int WIDTH = 576; //CELLSIZE*BOARD_WIDTH;</span>
+<span class="fc" id="L29">    public static int HEIGHT = 640; //BOARD_HEIGHT*CELLSIZE+TOPBAR;</span>
+<span class="fc" id="L30">    public static final int BOARD_WIDTH = WIDTH/CELLSIZE;</span>
+    public static final int BOARD_HEIGHT = 20;
+
+    public static final int INITIAL_PARACHUTES = 1;
+
+    public static final int FPS = 30;
+
+    public String configPath;
+
+<span class="fc" id="L39">    public static Random random = new Random();</span>
+
+
+
+    //LEVEL ATTRIBUTES FROM JSON FILE
+    public String layout;
+    public char[] charLayout;
+    public int time;
+    public int spawn_interval;
+    public double score_increase;
+    public double score_decrease;
+    public String[] balls_colour;
+
+<span class="fc" id="L52">    public int[] capture_increase = new int[5];</span>
+<span class="fc" id="L53">    public int[] capture_decrease = new int[5];</span>
+    
+
+    //TILES &amp; SPRITES
+<span class="fc" id="L57">    public Tile[] tiles = new Tile[324];</span>
+
+    PImage tileimg;
+    PImage wall0img;
+    PImage wall1img;
+    PImage wall2img;
+    PImage wall3img;
+    PImage wall4img;
+    PImage spawnerimg;
+    PImage hole0img;
+    PImage hole1img;
+    PImage hole2img;
+    PImage hole3img;
+    PImage hole4img;
+    
+    PImage ball0img;
+    PImage ball1img;
+    PImage ball2img;
+    PImage ball3img;
+    PImage ball4img;
+
+<span class="fc" id="L78">    public PImage[] ballCols = new PImage[5];</span>
+
+    //BALLS
+<span class="fc" id="L81">    public ArrayList&lt;Ball&gt; balls = new ArrayList&lt;Ball&gt;();</span>
+
+
+
+
+    //SPAWNER
+<span class="fc" id="L87">	public ArrayList&lt;Tile&gt; spawners = new ArrayList&lt;Tile&gt;();</span>
+    float spawn_time_left;
+    float spawn_offset;
+    int spawned_balls; 
+    float spawn_paused_time;
+    boolean initialball;
+<span class="fc" id="L93">    ArrayList&lt;Colours.c&gt; queuedColours = new ArrayList&lt;Colours.c&gt;();</span>
+<span class="fc" id="L94">    ArrayList&lt;PImage&gt; queuedSprites = new ArrayList&lt;PImage&gt;();</span>
+    int add;
+
+    //GUI
+<span class="fc" id="L98">    public ArrayList&lt;BallGUI&gt; GUIball = new ArrayList&lt;BallGUI&gt;();</span>
+
+    //BORDER
+<span class="fc" id="L101">    Border border = new Border(this);</span>
+
+    //LINES LOGIC
+<span class="fc" id="L104">    public ArrayList&lt;Line&gt; player_lines = new ArrayList&lt;Line&gt;();</span>
+<span class="fc" id="L105">    public LinkedList&lt;LinePoint&gt; linePoints = new LinkedList&lt;LinePoint&gt;();</span>
+    boolean clickFlag;
+    boolean rClickFlag;
+    boolean ctrlFlag;
+    int mosX1;
+    int mosY1;
+    int mosX2;
+    int mosY2;
+    public Line current_line;
+
+    public LinePoint n1;
+    public LinePoint n2;
+    
+
+
+
+    //GAME LOGIC
+    public int score;
+    public boolean ispaused;
+    public boolean isEnd;
+    int remaining_time;
+    int elapsed_time;
+    int saved_time;
+    int time_reset;
+    int paused_time;
+
+    //Level switch
+<span class="fc" id="L132">    int level_int = 0;</span>
+    int frame_count;
+    boolean isWon;
+    int scoring_time;
+    boolean switchFlag;
+
+    int tileProgress;
+    int tileDir;
+    PImage lastSprite;
+
+    int tileProgress2;
+    int tileDir2;
+    PImage lastSprite2;
+
+    boolean second_once;
+
+
+
+
+
+<span class="fc" id="L152">    public App() {</span>
+<span class="fc" id="L153">        this.configPath = &quot;config.json&quot;;</span>
+<span class="fc" id="L154">    }</span>
+
+    /**
+     * Initialise the setting of the window size.
+     */
+	@Override
+    public void settings() {
+<span class="fc" id="L161">        size(WIDTH, HEIGHT);</span>
+<span class="fc" id="L162">    }</span>
+
+    /**
+     * Load all resources such as images. Initialise the elements such as the player and map elements.
+     */
+	@Override
+    public void setup() {
+<span class="fc" id="L169">        frameRate(FPS);</span>
+		
+<span class="fc" id="L171">        JSONObject obj = loadJSONObject(configPath);</span>
+<span class="fc" id="L172">        JSONArray lvls = (JSONArray)obj.get(&quot;levels&quot;);</span>
+
+        //Increase
+<span class="fc" id="L175">        JSONObject inc = (JSONObject)obj.get(&quot;score_increase_from_hole_capture&quot;);</span>
+
+<span class="fc" id="L177">        capture_increase[0] = (int)inc.get(&quot;grey&quot;);</span>
+<span class="fc" id="L178">        capture_increase[1] = (int)inc.get(&quot;orange&quot;);</span>
+<span class="fc" id="L179">        capture_increase[2] = (int)inc.get(&quot;blue&quot;);</span>
+<span class="fc" id="L180">        capture_increase[3] = (int)inc.get(&quot;green&quot;);</span>
+<span class="fc" id="L181">        capture_increase[4] = (int)inc.get(&quot;yellow&quot;);</span>
+
+        //Decrease
+<span class="fc" id="L184">        JSONObject dec = (JSONObject)obj.get(&quot;score_decrease_from_wrong_hole&quot;);</span>
+
+<span class="fc" id="L186">        capture_decrease[0] = (int)dec.get(&quot;grey&quot;);</span>
+<span class="fc" id="L187">        capture_decrease[1] = (int)dec.get(&quot;orange&quot;);</span>
+<span class="fc" id="L188">        capture_decrease[2] = (int)dec.get(&quot;blue&quot;);</span>
+<span class="fc" id="L189">        capture_decrease[3] = (int)dec.get(&quot;green&quot;);</span>
+<span class="fc" id="L190">        capture_decrease[4] = (int)dec.get(&quot;yellow&quot;);</span>
+
+
+        //Selected Level
+<span class="fc" id="L194">        JSONObject lvl = lvls.getJSONObject(level_int);</span>
+
+        //LOAD VALUES FROM JSON FILE
+<span class="fc" id="L197">        layout = (String)lvl.get(&quot;layout&quot;);</span>
+        try{
+<span class="fc" id="L199">            File f = new File(layout);</span>
+<span class="fc" id="L200">            Scanner scan = new Scanner(f);</span>
+
+<span class="fc" id="L202">            String lvl_tmp = &quot;&quot;;</span>
+<span class="fc bfc" id="L203" title="All 2 branches covered.">            while(scan.hasNextLine()){</span>
+<span class="fc" id="L204">                lvl_tmp += scan.nextLine();</span>
+            }
+<span class="fc" id="L206">            layout = lvl_tmp;</span>
+<span class="fc" id="L207">            scan.close();</span>
+        }
+<span class="nc" id="L209">        catch(Exception e){</span>
+<span class="nc" id="L210">            System.out.println(e);</span>
+<span class="nc" id="L211">            System.out.println(&quot;\n\n\n ERROR IN LEVEL FILE HANDLING STUPID BOY\n\n\n\n&quot;);</span>
+<span class="fc" id="L212">        }</span>
+<span class="fc" id="L213">        charLayout = layout.toCharArray();</span>
+
+
+<span class="fc" id="L216">        time = (int)lvl.get(&quot;time&quot;);</span>
+<span class="fc" id="L217">        spawn_interval = (int)lvl.get(&quot;spawn_interval&quot;);</span>
+<span class="fc" id="L218">        score_increase = (double)lvl.get(&quot;score_increase_from_hole_capture_modifier&quot;);</span>
+<span class="fc" id="L219">        score_decrease = (double)lvl.get(&quot;score_decrease_from_wrong_hole_modifier&quot;);</span>
+<span class="fc" id="L220">        JSONArray ballstemp = (JSONArray)lvl.get(&quot;balls&quot;);</span>
+<span class="fc" id="L221">        balls_colour = new String[ballstemp.size()];</span>
+<span class="fc bfc" id="L222" title="All 2 branches covered.">        for(int i = 0; i &lt; ballstemp.size(); i++){</span>
+<span class="fc" id="L223">            balls_colour[i] = (String)ballstemp.get(i);</span>
+        }
+
+<span class="fc" id="L226">        initialball = true;</span>
+        
+
+        
+        //LOAD SPRITES 
+<span class="fc" id="L231">        tileimg = loadImage(&quot;src/main/resources/inkball/tile.png&quot;);</span>
+<span class="fc" id="L232">        wall0img = loadImage(&quot;src/main/resources/inkball/wall0.png&quot;);</span>
+<span class="fc" id="L233">        wall1img = loadImage(&quot;src/main/resources/inkball/wall1.png&quot;);</span>
+<span class="fc" id="L234">        wall2img = loadImage(&quot;src/main/resources/inkball/wall2.png&quot;);</span>
+<span class="fc" id="L235">        wall3img = loadImage(&quot;src/main/resources/inkball/wall3.png&quot;);</span>
+<span class="fc" id="L236">        wall4img = loadImage(&quot;src/main/resources/inkball/wall4.png&quot;);</span>
+<span class="fc" id="L237">        spawnerimg = loadImage(&quot;src/main/resources/inkball/entrypoint.png&quot;);</span>
+<span class="fc" id="L238">        hole0img = loadImage(&quot;src/main/resources/inkball/hole0.png&quot;);</span>
+<span class="fc" id="L239">        hole1img = loadImage(&quot;src/main/resources/inkball/hole1.png&quot;);</span>
+<span class="fc" id="L240">        hole2img = loadImage(&quot;src/main/resources/inkball/hole2.png&quot;);</span>
+<span class="fc" id="L241">        hole3img = loadImage(&quot;src/main/resources/inkball/hole3.png&quot;);</span>
+<span class="fc" id="L242">        hole4img = loadImage(&quot;src/main/resources/inkball/hole4.png&quot;);</span>
+
+<span class="fc" id="L244">        ball0img = loadImage(&quot;src/main/resources/inkball/ball0.png&quot;);</span>
+<span class="fc" id="L245">        ball1img = loadImage(&quot;src/main/resources/inkball/ball1.png&quot;);</span>
+<span class="fc" id="L246">        ball2img = loadImage(&quot;src/main/resources/inkball/ball2.png&quot;);</span>
+<span class="fc" id="L247">        ball3img = loadImage(&quot;src/main/resources/inkball/ball3.png&quot;);</span>
+<span class="fc" id="L248">        ball4img = loadImage(&quot;src/main/resources/inkball/ball4.png&quot;);</span>
+
+<span class="fc" id="L250">        ballCols[0] = ball0img;</span>
+<span class="fc" id="L251">        ballCols[1] = ball1img;</span>
+<span class="fc" id="L252">        ballCols[2] = ball2img;</span>
+<span class="fc" id="L253">        ballCols[3] = ball3img;</span>
+<span class="fc" id="L254">        ballCols[4] = ball4img;</span>
+
+
+
+        //SPAWNER BALLS
+        // queuedColours = new Colours.c[balls_colour.length];
+<span class="fc bfc" id="L260" title="All 2 branches covered.">        for(int i = 0; i &lt; balls_colour.length; i++){</span>
+<span class="fc" id="L261">            queuedColours.add(Colours.getColour(balls_colour[i])); </span>
+
+        }
+        // queuedSprites = new PImage[balls_colour.length];
+<span class="fc bfc" id="L265" title="All 2 branches covered.">        for(int i = 0; i &lt; balls_colour.length; i++){</span>
+<span class="fc" id="L266">            queuedSprites.add(ballCols[Colours.getSpriteIndex(queuedColours.get(i))]); </span>
+        }
+        // spawn_interval = 1;
+
+<span class="fc" id="L270">        int maxtmp = balls_colour.length;</span>
+<span class="pc bpc" id="L271" title="1 of 2 branches missed.">        if (maxtmp&gt;5)</span>
+<span class="nc" id="L272">        maxtmp = 5;</span>
+
+<span class="fc bfc" id="L274" title="All 2 branches covered.">        for(int i = 0; i &lt; maxtmp; i++){</span>
+<span class="fc" id="L275">            GUIball.add(new BallGUI(20 +i* 35 , 17, queuedSprites.get(i),this));</span>
+        }
+
+        //TILES SETUP
+<span class="fc bfc" id="L279" title="All 2 branches covered.">        for(int i = 0; i &lt; 18; i++){</span>
+<span class="fc bfc" id="L280" title="All 2 branches covered.">            for(int j = 0; j &lt; 18; j++){</span>
+<span class="fc" id="L281">                this.tiles[j + (i*18)] = new Tile(CELLSIZE*(j),TOPBAR + (i *CELLHEIGHT), this);</span>
+            }
+        }
+<span class="fc bfc" id="L284" title="All 2 branches covered.">        for(int i = 0; i &lt; 324; i++){</span>
+<span class="fc" id="L285">            tiles[i].arrayInd = i;</span>
+        }
+        //TILE
+<span class="fc bfc" id="L288" title="All 2 branches covered.">        for(int i = 0; i &lt; 324; i++){</span>
+<span class="pc bpc" id="L289" title="1 of 10 branches missed.">            switch (charLayout[i]) {</span>
+                case ' ':
+<span class="fc" id="L291">                    tiles[i].setSprite(tileimg);</span>
+<span class="fc" id="L292">                    break; </span>
+                case 'X':
+<span class="fc" id="L294">                    tiles[i].setSprite(wall0img);</span>
+                    // if(tiles[i].arrayInd == 18*13 )
+<span class="fc" id="L296">                    tiles[i].collisionEnabled = true;</span>
+<span class="fc" id="L297">                    break;</span>
+                case '1':
+<span class="fc" id="L299">                    tiles[i].setSprite(wall1img);</span>
+<span class="fc" id="L300">                    tiles[i].colour = Colours.c.Orange;</span>
+<span class="fc" id="L301">                    tiles[i].collisionEnabled = true;</span>
+<span class="fc" id="L302">                    break;</span>
+                case '2':
+<span class="fc" id="L304">                    tiles[i].setSprite(wall2img);</span>
+<span class="fc" id="L305">                    tiles[i].colour = Colours.c.Blue;</span>
+<span class="fc" id="L306">                    tiles[i].collisionEnabled = true;</span>
+<span class="fc" id="L307">                    break;  </span>
+                case '3':
+<span class="nc" id="L309">                    tiles[i].setSprite(wall3img);</span>
+<span class="nc" id="L310">                    tiles[i].colour = Colours.c.Green;</span>
+<span class="nc" id="L311">                    tiles[i].collisionEnabled = true;</span>
+<span class="nc" id="L312">                    break; </span>
+                case '4':
+<span class="fc" id="L314">                    tiles[i].setSprite(wall4img);</span>
+<span class="fc" id="L315">                    tiles[i].colour = Colours.c.Yellow;</span>
+<span class="fc" id="L316">                    tiles[i].collisionEnabled = true;</span>
+<span class="fc" id="L317">                    break;        </span>
+                case 'H':
+<span class="fc" id="L319">                    tiles[i].isHole = true;</span>
+<span class="fc bfc" id="L320" title="All 2 branches covered.">                    if(charLayout[i + 1] == '0'){</span>
+<span class="fc" id="L321">                        tiles[i].sprite = hole0img;</span>
+<span class="fc" id="L322">                        tiles[i].colour = Colours.c.Grey;</span>
+                    } 
+<span class="fc bfc" id="L324" title="All 2 branches covered.">                    if(charLayout[i + 1] == '1'){</span>
+<span class="fc" id="L325">                        tiles[i].sprite = hole1img;</span>
+<span class="fc" id="L326">                        tiles[i].colour = Colours.c.Orange;</span>
+                    }
+<span class="fc bfc" id="L328" title="All 2 branches covered.">                    if(charLayout[i + 1] == '2'){</span>
+<span class="fc" id="L329">                        tiles[i].sprite = hole2img;</span>
+<span class="fc" id="L330">                        tiles[i].colour = Colours.c.Blue;</span>
+                    }
+<span class="pc bpc" id="L332" title="1 of 2 branches missed.">                    if(charLayout[i + 1] == '3'){</span>
+<span class="nc" id="L333">                        tiles[i].sprite = hole3img;</span>
+<span class="nc" id="L334">                        tiles[i].colour = Colours.c.Green;</span>
+                    }       
+<span class="fc bfc" id="L336" title="All 2 branches covered.">                    if(charLayout[i + 1] == '4'){</span>
+<span class="fc" id="L337">                        tiles[i].sprite = hole4img;</span>
+<span class="fc" id="L338">                        tiles[i].colour = Colours.c.Yellow;</span>
+                    }
+
+<span class="fc" id="L341">                    tiles[i+ 1].banish();</span>
+<span class="fc" id="L342">                    tiles[i+ 0 + 18].banish();</span>
+<span class="fc" id="L343">                    tiles[i+ 1+ 18].banish();</span>
+<span class="fc" id="L344">                    break;</span>
+                
+                case 'S':
+<span class="fc" id="L347">                    tiles[i].setSprite(spawnerimg);</span>
+<span class="fc" id="L348">                    tiles[i].isSpawner = true;</span>
+<span class="fc" id="L349">                    spawners.add(tiles[i]);</span>
+<span class="fc" id="L350">                    break; </span>
+                case 'B':
+<span class="fc" id="L352">                    tiles[i].setSprite(tileimg);</span>
+<span class="fc" id="L353">                    tiles[i+1].ball_wall(tileimg);</span>
+
+<span class="fc" id="L355">                    PImage ballsprite = null;</span>
+<span class="fc" id="L356">                    Colours.c colour = Colours.c.Grey;</span>
+<span class="pc bpc" id="L357" title="1 of 2 branches missed.">                    if(charLayout[i + 1] == '0'){</span>
+<span class="nc" id="L358">                        ballsprite = ball0img;</span>
+<span class="nc" id="L359">                        colour = Colours.c.Grey;</span>
+                    } 
+<span class="pc bpc" id="L361" title="1 of 2 branches missed.">                    if(charLayout[i + 1] == '1'){</span>
+<span class="nc" id="L362">                        ballsprite = ball1img;</span>
+<span class="nc" id="L363">                        colour = Colours.c.Orange;</span>
+                    }
+<span class="pc bpc" id="L365" title="1 of 2 branches missed.">                    if(charLayout[i + 1] == '2'){</span>
+<span class="fc" id="L366">                        ballsprite = ball2img;</span>
+<span class="fc" id="L367">                        colour = Colours.c.Blue;</span>
+                    }
+<span class="pc bpc" id="L369" title="1 of 2 branches missed.">                    if(charLayout[i + 1] == '3'){</span>
+<span class="nc" id="L370">                        ballsprite = ball3img;</span>
+<span class="nc" id="L371">                        colour = Colours.c.Green;</span>
+                    }       
+<span class="pc bpc" id="L373" title="1 of 2 branches missed.">                    if(charLayout[i + 1] == '4'){</span>
+<span class="nc" id="L374">                        ballsprite = ball3img;   </span>
+<span class="nc" id="L375">                        colour = Colours.c.Yellow;</span>
+                    }
+<span class="fc" id="L377">                    Ball b = spawnBall(ballsprite, tiles[i].getX(),tiles[i].getY());</span>
+<span class="fc" id="L378">                    b.colour = colour;</span>
+<span class="fc" id="L379">                    break; </span>
+                default:
+                    break;
+            }
+        }
+
+<span class="fc" id="L385">    }</span>
+
+    Ball spawnBall(PImage sprite, float x, float y){
+<span class="fc" id="L388">        Ball ball = new Ball(x,y, this);</span>
+<span class="fc" id="L389">        ball.setSprite(sprite);</span>
+<span class="fc" id="L390">        balls.add(ball);</span>
+
+<span class="fc" id="L392">        return ball;</span>
+    }
+    
+    Tile getRandomSpawner(){
+<span class="fc" id="L396">        Random rand = new Random();</span>
+        
+<span class="fc" id="L398">        return spawners.get(rand.nextInt(spawners.size()));</span>
+    }
+
+
+    public Ball spawnerBall(PImage sprite, Colours.c colour){
+<span class="fc" id="L403">        Tile spawner = getRandomSpawner();</span>
+
+<span class="fc" id="L405">        float x = spawner.x +16;</span>
+<span class="fc" id="L406">        float y = spawner.y +16;</span>
+
+<span class="fc" id="L408">        Ball ball = new Ball(x,y, this);</span>
+<span class="fc" id="L409">        ball.setSprite(sprite);</span>
+<span class="fc" id="L410">        ball.colour = colour;</span>
+<span class="fc" id="L411">        balls.add(ball);</span>
+
+<span class="fc" id="L413">        GUIball.remove(GUIball.get(0));</span>
+<span class="pc bpc" id="L414" title="1 of 2 branches missed.">        if(GUIball.size() &gt;0){</span>
+            
+<span class="fc" id="L416">            GUIball.get(0).isNext = true;</span>
+        }
+
+<span class="pc bpc" id="L419" title="1 of 2 branches missed.">        if(spawned_balls +5 &lt; balls_colour.length)</span>
+<span class="nc" id="L420">        GUIball.add(new BallGUI(20 +5* 35 , 17, queuedSprites.get(spawned_balls +5),this));</span>
+
+<span class="fc bfc" id="L422" title="All 2 branches covered.">        if(spawn_time_left == 0){</span>
+<span class="fc" id="L423">            spawn_time_left = time;</span>
+        }
+
+<span class="fc" id="L426">        return ball;</span>
+    }
+
+    /**
+     * Receive key pressed signal from the keyboard.
+     */
+	@Override
+    public void keyPressed(KeyEvent event){
+<span class="nc bnc" id="L434" title="All 2 branches missed.">        if(event.getKey() == 'r'){</span>
+<span class="nc" id="L435">            reset(0);</span>
+
+        }
+<span class="nc bnc" id="L438" title="All 2 branches missed.">        if(event.getKey() == ' '){</span>
+<span class="nc bnc" id="L439" title="All 2 branches missed.">            if(ispaused == false){</span>
+<span class="nc" id="L440">                ispaused = true;</span>
+                
+
+            }
+            else{
+<span class="nc" id="L445">                ispaused = false;</span>
+<span class="nc" id="L446">                frameCount = 0;</span>
+            }
+
+        }
+        
+<span class="nc bnc" id="L451" title="All 2 branches missed.">        if(event.getKey() == 'g'){</span>
+<span class="nc" id="L452">            GUIball.add(new BallGUI(20 +GUIball.size()* 35 + GUIball.get(0).offset , 17, ball4img, this));</span>
+
+        }
+    
+
+<span class="nc bnc" id="L457" title="All 2 branches missed.">        if(event.getKeyCode() == CONTROL){</span>
+<span class="nc" id="L458">            ctrlFlag = true;</span>
+        }
+<span class="nc" id="L460">    }</span>
+
+
+    void reset(int new_score){
+<span class="nc" id="L464">        isEnd = false;</span>
+<span class="nc" id="L465">        isWon = false;</span>
+<span class="nc" id="L466">        time_reset += elapsed_time;</span>
+<span class="nc" id="L467">        balls.clear();</span>
+<span class="nc" id="L468">        spawners.clear();</span>
+<span class="nc" id="L469">        player_lines.clear();</span>
+<span class="nc" id="L470">        linePoints.clear();</span>
+<span class="nc" id="L471">        elapsed_time = millis() - time_reset - paused_time;</span>
+<span class="nc" id="L472">        spawned_balls = 0;</span>
+<span class="nc" id="L473">        spawn_offset = 0;</span>
+<span class="nc" id="L474">        spawn_paused_time = 0;</span>
+<span class="nc" id="L475">        initialball = true;</span>
+<span class="nc" id="L476">        GUIball.clear();</span>
+<span class="nc" id="L477">        queuedColours.clear();</span>
+<span class="nc" id="L478">        queuedSprites.clear();</span>
+
+<span class="nc" id="L480">        tileProgress = 0;</span>
+<span class="nc" id="L481">        tileDir = 0;</span>
+<span class="nc" id="L482">        lastSprite = null;</span>
+    
+<span class="nc" id="L484">        tileProgress2 =0 ;</span>
+<span class="nc" id="L485">        tileDir2= 0;</span>
+<span class="nc" id="L486">        lastSprite2 = null;</span>
+    
+<span class="nc" id="L488">        second_once = false;</span>
+
+<span class="nc" id="L490">        score = new_score;</span>
+
+<span class="nc" id="L492">        setup();</span>
+<span class="nc" id="L493">    }</span>
+    /**
+     * Receive key released signal from the keyboard.
+     */
+	@Override
+    public void keyReleased(KeyEvent event){
+<span class="nc bnc" id="L499" title="All 2 branches missed.">        if(event.getKeyCode() == CONTROL){</span>
+<span class="nc" id="L500">            ctrlFlag = false;</span>
+        }  
+<span class="nc" id="L502">    }</span>
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+<span class="nc bnc" id="L506" title="All 2 branches missed.">        if(isEnd == false){</span>
+
+
+<span class="nc bnc" id="L509" title="All 4 branches missed.">        if(e.getButton() == LEFT &amp;&amp; ctrlFlag == false){ </span>
+        
+<span class="nc" id="L511">            clickFlag = true;</span>
+<span class="nc" id="L512">            mosX1 = e.getX();</span>
+<span class="nc" id="L513">            mosY1 = e.getY();</span>
+
+<span class="nc" id="L515">            linePoints.add(new LinePoint(mosX1, mosX1, mosY1, mosY1));</span>
+
+<span class="nc" id="L517">            current_line = new Line(this);</span>
+<span class="nc" id="L518">            player_lines.add(current_line);</span>
+<span class="nc" id="L519">            current_line.set_points(linePoints);</span>
+            }
+        
+
+<span class="nc bnc" id="L523" title="All 6 branches missed.">        if(e.getButton() == RIGHT || (e.getButton() == LEFT &amp;&amp; ctrlFlag)){</span>
+
+
+<span class="nc" id="L526">            rClickFlag = true;</span>
+        }
+
+        }
+<span class="nc" id="L530">    }</span>
+	
+	@Override
+    public void mouseDragged(MouseEvent e) {
+        // add line segments to player-drawn line object if left mouse button is held
+		
+		// remove player-drawn line object if right mouse button is held 
+		// and mouse position collides with the line
+        
+
+
+       
+
+<span class="nc bnc" id="L543" title="All 2 branches missed.">        if(clickFlag == true){</span>
+
+<span class="nc" id="L545">            mosX2 = e.getX();</span>
+<span class="nc" id="L546">            mosY2 = e.getY();</span>
+
+            
+<span class="nc" id="L549">            linePoints.add(new LinePoint(mosX1, mosX2, mosY1, mosY2));</span>
+<span class="nc" id="L550">            mosX1 = mosX2;</span>
+<span class="nc" id="L551">            mosY1 = mosY2;</span>
+
+<span class="nc" id="L553">            current_line.set_points(linePoints);</span>
+        }
+<span class="nc bnc" id="L555" title="All 2 branches missed.">        if(rClickFlag == true){</span>
+<span class="nc bnc" id="L556" title="All 2 branches missed.">            for(int i = 0; i &lt; player_lines.size(); i++){</span>
+                
+<span class="nc" id="L558">                boolean check = player_lines.get(i).check_mouseOver(e.getX(), e.getY());</span>
+<span class="nc bnc" id="L559" title="All 2 branches missed.">                if(check == true){</span>
+<span class="nc" id="L560">                    player_lines.remove(i);</span>
+                }
+            }
+        }
+    
+<span class="nc" id="L565">    }</span>
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+
+<span class="nc bnc" id="L570" title="All 2 branches missed.">        if(isEnd == false){</span>
+
+  
+       
+<span class="nc bnc" id="L574" title="All 2 branches missed.">        if(e.getButton() == LEFT){ </span>
+<span class="nc" id="L575">            clickFlag = false;</span>
+<span class="nc" id="L576">            linePoints = new LinkedList&lt;LinePoint&gt;();</span>
+<span class="nc" id="L577">            current_line = null;</span>
+            }
+
+<span class="nc bnc" id="L580" title="All 2 branches missed.">        if(e.getButton() == RIGHT){</span>
+<span class="nc" id="L581">            rClickFlag = false;</span>
+        }
+    }
+<span class="nc" id="L584">    }</span>
+
+    /**
+     * Draw all elements in the game by current frame.
+     */
+	@Override
+    public void draw() {
+<span class="fc" id="L591">    background(200, 200, 200);</span>
+
+
+    //Draw tiles
+<span class="fc bfc" id="L595" title="All 2 branches covered.">    for(int i = 0; i &lt; 324; i++){</span>
+<span class="fc bfc" id="L596" title="All 2 branches covered.">        if(tiles[i].sprite != null)</span>
+<span class="fc" id="L597">        tiles[i].draw();</span>
+    }
+
+    //Draw balls
+<span class="fc bfc" id="L601" title="All 2 branches covered.">    for(int i = 0; i &lt; balls.size(); i++){</span>
+<span class="pc bpc" id="L602" title="1 of 2 branches missed.">        if(balls.get(i).sprite != null)</span>
+<span class="fc" id="L603">        balls.get(i).draw();</span>
+    }
+
+
+
+    
+    //Border Collision
+<span class="fc" id="L610">    CollisionReport borderCollisionReport = border.checkCollision();  </span>
+<span class="fc bfc" id="L611" title="All 2 branches covered.">    if(borderCollisionReport.collision_occured){</span>
+<span class="fc" id="L612">        borderCollisionReport.ball.iVelocity = borderCollisionReport.ux;</span>
+<span class="fc" id="L613">        borderCollisionReport.ball.jVelocity = borderCollisionReport.uy;</span>
+    }
+
+    //Draw Lines
+<span class="fc" id="L617">    stroke(0,0,0);</span>
+<span class="fc" id="L618">    strokeWeight(10);</span>
+<span class="pc bpc" id="L619" title="1 of 2 branches missed.">    for(int i = 0; i &lt; player_lines.size(); i++){</span>
+
+<span class="nc bnc" id="L621" title="All 2 branches missed.">        for(int j = 0; j&lt; player_lines.get(i).segments.size(); j++){</span>
+<span class="nc" id="L622">            line(player_lines.get(i).segments.get(j).x1,player_lines.get(i).segments.get(j).y1,player_lines.get(i).segments.get(j).x2,player_lines.get(i).segments.get(j).y2);</span>
+        }
+
+        //Ball collision
+<span class="nc" id="L626">        CollisionReport lineCollisionReport = player_lines.get(i).checkCollision();  </span>
+<span class="nc bnc" id="L627" title="All 2 branches missed.">        if(lineCollisionReport.collision_occured){</span>
+<span class="nc" id="L628">            player_lines.remove(i);</span>
+            
+<span class="nc" id="L630">            lineCollisionReport.ball.iVelocity = lineCollisionReport.ux;</span>
+<span class="nc" id="L631">            lineCollisionReport.ball.jVelocity = lineCollisionReport.uy;</span>
+
+
+            //DeBUG 
+            // lineCollisionReport.ball.iVelocity = 0;
+            // lineCollisionReport.ball.jVelocity = 0;
+
+        }
+
+    }
+
+    //DEBUG POINTERS
+<span class="fc" id="L643">    strokeWeight(5);</span>
+<span class="fc" id="L644">    stroke(255,2,2);</span>
+<span class="pc bpc" id="L645" title="1 of 2 branches missed.">    if(n1 != null){</span>
+<span class="nc" id="L646">        line(n1.x1,n1.y1,n1.x2,n1.y2);</span>
+    }
+<span class="fc" id="L648">    stroke(2,255,2);</span>
+<span class="pc bpc" id="L649" title="1 of 2 branches missed.">    if(n2 != null){</span>
+<span class="nc" id="L650">        line(n2.x1,n2.y1,n2.x2,n2.y2);</span>
+    }
+    
+    //DETECT WIN
+<span class="pc bpc" id="L654" title="2 of 6 branches missed.">    if(balls.size() == 0 &amp;&amp; GUIball.size() == 0 &amp;&amp; isWon == false){</span>
+<span class="fc" id="L655">        isEnd = true;</span>
+<span class="fc" id="L656">        isWon = true;</span>
+<span class="fc" id="L657">        scoring_time = remaining_time;</span>
+<span class="fc" id="L658">        frameCount =1;</span>
+        
+    }
+    
+    //GAME END
+<span class="pc bpc" id="L663" title="1 of 4 branches missed.">    if(isWon &amp;&amp; scoring_time != 0){</span>
+<span class="pc bpc" id="L664" title="1 of 2 branches missed.">        if(ispaused == false){</span>
+<span class="pc bpc" id="L665" title="1 of 2 branches missed.">            if(frameCount == 1){</span>
+<span class="fc" id="L666">                scoring_time -= 1;</span>
+<span class="fc" id="L667">                score += 1;</span>
+<span class="fc" id="L668">                frameCount = 0;</span>
+    
+<span class="pc bpc" id="L670" title="1 of 2 branches missed.">                if(lastSprite == null)</span>
+<span class="fc" id="L671">                lastSprite = tiles[0].sprite;</span>
+<span class="fc" id="L672">                tileDance();</span>
+            }
+            else{
+<span class="nc" id="L675">                frameCount++;</span>
+            }   
+        }
+ 
+    }
+
+<span class="pc bpc" id="L681" title="1 of 4 branches missed.">    if(isWon &amp;&amp; scoring_time == 0){</span>
+<span class="nc bnc" id="L682" title="All 2 branches missed.">        if(level_int + 1 &lt; 3)</span>
+<span class="nc" id="L683">        level_int++;</span>
+<span class="nc" id="L684">        reset(score);</span>
+    }
+        //UI elements
+<span class="fc" id="L687">        drawScore();</span>
+<span class="fc" id="L688">        drawQueue();</span>
+<span class="fc" id="L689">        drawSpawnTime();</span>
+<span class="fc" id="L690">        drawTime();</span>
+<span class="fc" id="L691">    }</span>
+
+
+
+
+    void tileDance(){
+<span class="fc" id="L697">        tiles[tileProgress].setSprite(lastSprite);</span>
+
+<span class="pc bpc" id="L699" title="3 of 4 branches missed.">        if(tileProgress == 17 &amp;&amp; tileDir == 0){</span>
+<span class="nc" id="L700">            tileDir++;</span>
+        }
+<span class="pc bpc" id="L702" title="3 of 4 branches missed.">        if(tileProgress ==323 &amp;&amp; tileDir ==1){</span>
+<span class="nc" id="L703">            tileDir++;</span>
+
+        }
+<span class="pc bpc" id="L706" title="3 of 4 branches missed.">        if(tileProgress ==323- 17 &amp;&amp; tileDir == 2){</span>
+<span class="nc" id="L707">            tileDir++;</span>
+
+        }
+<span class="pc bpc" id="L710" title="2 of 4 branches missed.">        if(tileProgress == 0 &amp;&amp; tileDir == 3){</span>
+<span class="nc" id="L711">            tileDir = 0;</span>
+<span class="nc" id="L712">            tileProgress = 0;</span>
+        }
+
+
+        
+
+
+<span class="pc bpc" id="L719" title="1 of 2 branches missed.">        if(tileDir == 0){</span>
+<span class="fc" id="L720">            tileProgress++;</span>
+        }
+<span class="pc bpc" id="L722" title="1 of 2 branches missed.">        if(tileDir ==1 ){</span>
+<span class="nc" id="L723">            tileProgress +=18;</span>
+        }
+<span class="pc bpc" id="L725" title="1 of 2 branches missed.">        if(tileDir ==2 ){</span>
+<span class="nc" id="L726">            tileProgress--;</span>
+        }
+<span class="pc bpc" id="L728" title="1 of 2 branches missed.">        if(tileDir ==3 ){</span>
+<span class="nc" id="L729">            tileProgress-= 18;</span>
+        }
+
+
+<span class="fc" id="L733">        lastSprite = tiles[tileProgress].sprite;</span>
+<span class="fc" id="L734">        tiles[tileProgress].setSprite(wall4img);</span>
+        
+<span class="pc bpc" id="L736" title="1 of 2 branches missed.">        if(second_once == false){</span>
+<span class="fc" id="L737">            second_once = true;</span>
+<span class="fc" id="L738">            tileDir2 = 2;</span>
+<span class="fc" id="L739">            tileProgress2 =323;</span>
+<span class="fc" id="L740">            lastSprite2 = tiles[323].sprite;</span>
+        }
+<span class="fc" id="L742">        tileDance2();</span>
+<span class="fc" id="L743">    }</span>
+
+
+
+    void tileDance2(){
+<span class="fc" id="L748">        tiles[tileProgress2].setSprite(lastSprite2);</span>
+
+<span class="pc bpc" id="L750" title="3 of 4 branches missed.">        if(tileProgress2 == 17 &amp;&amp; tileDir2 == 0){</span>
+<span class="nc" id="L751">            tileDir2++;</span>
+        }
+<span class="pc bpc" id="L753" title="2 of 4 branches missed.">        if(tileProgress2 ==323 &amp;&amp; tileDir2 ==1){</span>
+<span class="nc" id="L754">            tileDir2++;</span>
+
+        }
+<span class="pc bpc" id="L757" title="3 of 4 branches missed.">        if(tileProgress2 ==323- 17 &amp;&amp; tileDir2 == 2){</span>
+<span class="nc" id="L758">            tileDir2++;</span>
+
+        }
+<span class="pc bpc" id="L761" title="3 of 4 branches missed.">        if(tileProgress2 == 0 &amp;&amp; tileDir2 == 3){</span>
+<span class="nc" id="L762">            tileDir2 = 0;</span>
+<span class="nc" id="L763">            tileProgress2 = 0;</span>
+        }
+
+
+        
+
+
+<span class="pc bpc" id="L770" title="1 of 2 branches missed.">        if(tileDir2 == 0){</span>
+<span class="nc" id="L771">            tileProgress2++;</span>
+        }
+<span class="pc bpc" id="L773" title="1 of 2 branches missed.">        if(tileDir2 ==1 ){</span>
+<span class="nc" id="L774">            tileProgress2+=18;</span>
+        }
+<span class="pc bpc" id="L776" title="1 of 2 branches missed.">        if(tileDir2 ==2 ){</span>
+<span class="fc" id="L777">            tileProgress2--;</span>
+        }
+<span class="pc bpc" id="L779" title="1 of 2 branches missed.">        if(tileDir2 ==3 ){</span>
+<span class="nc" id="L780">            tileProgress2-= 18;</span>
+        }
+
+
+<span class="fc" id="L784">        lastSprite2 = tiles[tileProgress2].sprite;</span>
+<span class="fc" id="L785">        tiles[tileProgress2].setSprite(wall4img);</span>
+<span class="fc" id="L786">    }</span>
+
+
+
+public void drawScore(){
+<span class="fc" id="L791">    PFont f = createFont(&quot;Arial&quot;,CELLSIZE*0.8f,true);</span>
+<span class="fc" id="L792">    textFont(f,CELLSIZE * 0.8f);           // STEP 3 Specify font to be used</span>
+<span class="fc" id="L793">    fill(25,25,25);</span>
+<span class="fc" id="L794">    textAlign(CENTER, CENTER);</span>
+
+<span class="fc" id="L796">    String scoreText = &quot;Score: &quot;+ score;</span>
+<span class="fc" id="L797">    text( scoreText,WIDTH- WIDTH/6 + 30,TOPBAR/2 -10);</span>
+
+<span class="fc" id="L799">}</span>
+
+public void drawTime(){
+
+
+<span class="pc bpc" id="L804" title="1 of 4 branches missed.">        if(ispaused == false &amp;&amp; isEnd == false)</span>
+<span class="fc" id="L805">        elapsed_time = millis() - time_reset - paused_time;</span>
+
+<span class="fc" id="L807">        remaining_time = time-elapsed_time/1000;</span>
+<span class="fc bfc" id="L808" title="All 2 branches covered.">        if(remaining_time &lt;= 0){</span>
+<span class="fc" id="L809">            isEnd = true;</span>
+<span class="fc" id="L810">            ispaused = false;</span>
+<span class="fc" id="L811">            clickFlag = false;</span>
+<span class="fc" id="L812">            rClickFlag = false;</span>
+
+
+            //Header
+<span class="fc" id="L816">            fill(255,190,190);</span>
+<span class="fc" id="L817">            stroke(255,0,0);</span>
+<span class="fc" id="L818">            rect(0,0 ,576,64);</span>
+
+
+<span class="fc" id="L821">            PFont a = createFont(&quot;Arial&quot;,CELLSIZE*1.5f,true);</span>
+<span class="fc" id="L822">            textFont(a,CELLSIZE * 1.5f);           // STEP 3 Specify font to be used</span>
+<span class="fc" id="L823">            fill(200,25,25);</span>
+<span class="fc" id="L824">            textAlign(CENTER, CENTER);</span>
+<span class="fc" id="L825">            text( &quot;=== TIME'S UP ===&quot;,WIDTH- WIDTH/2 - 50,TOPBAR/2);</span>
+
+
+
+        }
+
+<span class="pc bpc" id="L831" title="1 of 2 branches missed.">        if(ispaused){</span>
+<span class="nc" id="L832">            PFont f = createFont(&quot;Arial&quot;,CELLSIZE*0.8f,true);</span>
+<span class="nc" id="L833">            textFont(f,CELLSIZE * 0.8f);           // STEP 3 Specify font to be used</span>
+<span class="nc" id="L834">            fill(25,25,25);</span>
+<span class="nc" id="L835">            textAlign(CENTER, CENTER);</span>
+<span class="nc" id="L836">            text( &quot;**PAUSED**&quot;,WIDTH- WIDTH/6 -150,TOPBAR/2 -10 +25);</span>
+
+        }
+<span class="pc bpc" id="L839" title="1 of 4 branches missed.">        if(ispaused || isEnd){</span>
+<span class="fc" id="L840">            paused_time = millis() - time_reset - elapsed_time;</span>
+        }
+<span class="fc" id="L842">        PFont f = createFont(&quot;Arial&quot;,CELLSIZE*0.8f,true);</span>
+<span class="fc" id="L843">        textFont(f,CELLSIZE * 0.8f);           // STEP 3 Specify font to be used</span>
+<span class="fc" id="L844">        fill(25,25,25);</span>
+<span class="fc" id="L845">        textAlign(CENTER, CENTER);</span>
+        if(5 == 10){
+            if(saved_time == 0){
+            saved_time = elapsed_time;
+            }
+            text( &quot;Time: &quot;+saved_time/1000,WIDTH- WIDTH/8,TOPBAR/2);
+
+        }
+        else{
+<span class="fc bfc" id="L854" title="All 2 branches covered.">            if(isWon == false)</span>
+<span class="fc" id="L855">            text( &quot;Time: &quot;+remaining_time,WIDTH- WIDTH/6 + 30,TOPBAR/2 -10 +25);</span>
+<span class="fc bfc" id="L856" title="All 2 branches covered.">            if(isWon)</span>
+<span class="fc" id="L857">            text( &quot;Time: &quot;+scoring_time,WIDTH- WIDTH/6 + 30,TOPBAR/2 -10 +25);</span>
+
+        }
+<span class="fc" id="L860">    }</span>
+
+
+    public void drawSpawnTime(){
+
+
+<span class="fc" id="L866">        float spawn_time = millis() - time_reset - paused_time;</span>
+
+
+<span class="fc" id="L869">        spawn_time_left = spawn_interval - spawn_time/1000 + spawn_offset + spawn_paused_time;</span>
+        //ROUND to 1 dp
+<span class="fc" id="L871">        spawn_time_left = (float)(Math.round(spawn_time_left*Math.pow(10,1))/Math.pow(10,1));</span>
+
+<span class="pc bpc" id="L873" title="1 of 4 branches missed.">        if(initialball &amp;&amp; ispaused == false){spawn_time_left = 0; initialball =false; spawn_offset -= spawn_interval;}</span>
+
+<span class="fc bfc" id="L875" title="All 2 branches covered.">        if(spawn_time_left &lt;= 0){</span>
+<span class="pc bpc" id="L876" title="1 of 2 branches missed.">            if(spawned_balls &lt; queuedColours.size()){</span>
+
+<span class="fc" id="L878">                int arrayNum = spawned_balls;</span>
+<span class="fc" id="L879">                spawnerBall(queuedSprites.get(arrayNum), queuedColours.get(arrayNum));</span>
+                
+<span class="fc" id="L881">                spawn_paused_time = 0;</span>
+<span class="fc" id="L882">                spawned_balls += 1;</span>
+<span class="fc" id="L883">                spawn_offset += spawn_interval;</span>
+                
+
+            }
+
+        }
+<span class="fc bfc" id="L889" title="All 2 branches covered.">        if(GUIball.size() == 0){</span>
+
+<span class="fc" id="L891">                float remainder  =  (float)remaining_time/10;</span>
+<span class="fc" id="L892">                float leftover = remainder - floor(remainder);</span>
+    
+    
+<span class="fc" id="L895">                spawn_paused_time  = spawn_interval- leftover * spawn_interval;</span>
+            
+            
+
+           
+        }
+<span class="fc" id="L901">        String timeString = Float.toString(spawn_time_left);</span>
+
+<span class="fc" id="L903">        PFont f = createFont(&quot;Arial&quot; ,CELLSIZE*0.8f,true);</span>
+<span class="fc" id="L904">        textFont(f,CELLSIZE * 0.8f);           // STEP 3 Specify font to be used</span>
+<span class="fc" id="L905">        fill(25,25,25);</span>
+<span class="fc" id="L906">        textAlign(CENTER, CENTER);</span>
+<span class="pc bpc" id="L907" title="1 of 2 branches missed.">        if(spawned_balls &gt;= queuedColours.size())</span>
+<span class="nc" id="L908">        timeString = &quot;0.0&quot;;</span>
+<span class="fc" id="L909">        text(timeString,WIDTH- 2*WIDTH/3 + 30,TOPBAR/2 +10);</span>
+
+<span class="fc" id="L911">    }</span>
+
+    public void drawQueue(){
+<span class="fc" id="L914">        fill(0,0,0);</span>
+<span class="fc" id="L915">        stroke(0,0,0);</span>
+<span class="fc" id="L916">        rect(20,12 ,32 * 5 +10,32 + 8);</span>
+
+
+
+<span class="fc bfc" id="L920" title="All 2 branches covered.">        for(int i = 0; i &lt;GUIball.size(); i++){</span>
+<span class="fc" id="L921">            GUIball.get(i).draw();</span>
+        }
+
+
+        //COVER
+<span class="fc" id="L926">        fill(200,200,200);</span>
+<span class="fc" id="L927">        stroke(200,200,200);</span>
+<span class="fc" id="L928">        rect(35 + 32 * 5 ,12 ,40,32 + 8);</span>
+<span class="fc" id="L929">    }</span>
+
+
+
+
+    public void ballHole(Ball ball, Tile hole){
+<span class="pc bpc" id="L935" title="1 of 2 branches missed.">        if(ball.colour == hole.colour){</span>
+<span class="nc" id="L936">            score += capture_increase[Colours.getSpriteIndex(hole.colour)] *score_increase;</span>
+        }
+<span class="pc bpc" id="L938" title="2 of 4 branches missed.">        else if(ball.colour == Colours.c.Grey || hole.colour == Colours.c.Grey){</span>
+<span class="fc" id="L939">            score += capture_increase[0] *score_increase;</span>
+        }
+        else{
+<span class="nc" id="L942">            score -= capture_decrease[Colours.getSpriteIndex(hole.colour)] *score_decrease;</span>
+
+<span class="nc bnc" id="L944" title="All 2 branches missed.">            if(GUIball.size() ==0)</span>
+<span class="nc" id="L945">            spawn_offset += spawn_interval;</span>
+
+<span class="nc" id="L947">            queuedSprites.add(ball.sprite);</span>
+<span class="nc" id="L948">            queuedColours.add(ball.colour);</span>
+<span class="nc bnc" id="L949" title="All 4 branches missed.">            if(GUIball.size() &lt; 5 &amp;&amp; GUIball.size() &gt; 0)</span>
+<span class="nc" id="L950">            GUIball.add(new BallGUI(20 +GUIball.size()* 35 + GUIball.get(0).offset , 17, ball.sprite,this));</span>
+    
+<span class="nc bnc" id="L952" title="All 4 branches missed.">            if(GUIball.size() &lt; 5 &amp;&amp; GUIball.size() == 0)</span>
+<span class="nc" id="L953">            GUIball.add(new BallGUI(20 +GUIball.size()* 35, 17, ball.sprite,this));</span>
+
+            // System.out.println(&quot;Added + &quot; + GUIball.get(GUIball.size()-1).sprite);
+        }
+
+
+
+<span class="fc" id="L960">        balls.remove(ball);</span>
+<span class="fc" id="L961">    }</span>
+
+    public void setn1(LinePoint p){
+<span class="nc" id="L964">        n1 = p;</span>
+<span class="nc" id="L965">    }</span>
+    public void setn2(LinePoint p){
+<span class="nc" id="L967">        n2 = p;</span>
+<span class="nc" id="L968">    }</span>
+    public static void main(String[] args) {
+<span class="nc" id="L970">        PApplet.main(&quot;inkball.App&quot;);</span>
+<span class="nc" id="L971">    }</span>
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
