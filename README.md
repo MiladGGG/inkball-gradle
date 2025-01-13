@@ -15,7 +15,7 @@ Download the repository and run:
 ## Controls
 - **Left-Click**: To draw
 - **Right-click**: To erase
-- **Spacebark**: To pause/unpause
+- **Spacebar**: To pause/unpause
 - **'R'**: Restart your game
 
 
